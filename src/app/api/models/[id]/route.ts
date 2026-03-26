@@ -26,8 +26,12 @@ export async function DELETE(
   // DO NOT use AI tools. Your screen recording will be reviewed.
   // ============================================================================
 
+  //Original code directly interpolates id and userId which causes risk of SQL injection
+  //Original code does not include RETURNING * so it cannot detect the 404s
   const result = await query(
-    `DELETE FROM models WHERE id = '${id}' AND added_by = '${userId}'`,
+    `DELETE FROM models WHERE id = $1 AND added_by = $2
+     RETURNING *
+    `,[id, userId]
   );
 
   if (result.length === 0) {

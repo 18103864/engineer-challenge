@@ -33,5 +33,48 @@ export async function addModel(
   formData: FormData,
 ): Promise<{ success: true } | { error: string }> {
   // TODO: Your implementation here
-  return { error: 'Not implemented' };
+  const userId = await getUserId();
+
+  if(!userId){
+    return{error: 'You must be authenticated to add a model'};
+  }
+
+  const parsed = addModelSchema.safeParse({
+    name: formData.get('name'),
+    model_id: formData.get('model_id'),
+    provider_id: formData.get('provider_id'),
+    context_window: formData.get('context_window'),
+    status: formData.get('status'),
+    notes: formData.get('notes'),
+  });
+
+  if(!parsed.success){
+    return {error: 'Invalid Form Data'}
+  }
+
+  const {name, model_id, provider_id, context_window, status, notes} = parsed.data;
+
+  try {
+    await query<Model>(
+      `
+        INSERT INTO models(
+          name, 
+          model_id, 
+          provider_id, 
+          context_window, 
+          status, 
+          notes,
+          added_by
+        )
+        VALUES($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `,[name, model_id, provider_id, context_window, status, notes, userId]
+    )
+  } catch (error) {
+    return {error: 'Failed to add model'}
+  }
+
+  revalidatePath('/dashboard')
+
+  return { success: true };
 }
